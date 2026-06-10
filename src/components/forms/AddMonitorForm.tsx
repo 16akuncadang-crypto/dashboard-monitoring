@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { X, Loader2, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Loader2, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import type { MonitorType, Vendor } from "@/types";
 
 interface AddMonitorFormProps {
@@ -23,6 +23,15 @@ const OTHER_VENDORS: { value: Vendor; label: string }[] = [
   { value: "sendgrid", label: "SendGrid" },
   { value: "custom", label: "Custom" },
 ];
+
+// Providers that require CA cert — auto-detect from hostname
+const CA_REQUIRED_HOSTS = ["aivencloud.com", "render.com"];
+
+function detectSslProvider(host: string): "aiven" | "render" | null {
+  if (host.includes("aivencloud.com")) return "aiven";
+  if (host.includes("render.com")) return "render";
+  return null;
+}
 
 export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFormProps) {
   const [type, setType] = useState<MonitorType>(defaultType);
@@ -56,6 +65,15 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Auto-enable SSL and show hint when host matches known providers
+  const sslProvider = detectSslProvider(dbHost);
+  const needsCa = dbSsl && CA_REQUIRED_HOSTS.some((h) => dbHost.includes(h));
+  const caWarning = needsCa && !sslCa.trim();
+
+  useEffect(() => {
+    if (sslProvider && !dbSsl) setDbSsl(true);
+  }, [sslProvider, dbSsl]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -84,7 +102,12 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
         name,
         type,
         url: url || undefined,
-        vendor: type === "api_ai" ? vendor : type === "api_generic" || type === "api_header_quota" ? vendor || "custom" : undefined,
+        vendor:
+          type === "api_ai"
+            ? vendor
+            : type === "api_generic" || type === "api_header_quota"
+            ? vendor || "custom"
+            : undefined,
         api_label: apiLabel || undefined,
         interval_sec: intervalSec,
         alert_on_slow_ms: alertOnSlowMs ? parseInt(alertOnSlowMs) : undefined,
@@ -152,17 +175,29 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
             </div>
           </div>
 
-          {/* Common fields */}
+          {/* Common name */}
           <div>
             <label className="label">Name *</label>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="prod-api-01" required />
+            <input
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="prod-api-01"
+              required
+            />
           </div>
 
-          {/* Server / Generic API */}
+          {/* Server / Generic API URL */}
           {(type === "server" || type === "api_generic" || type === "api_header_quota") && (
             <div>
               <label className="label">URL *</label>
-              <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://api.example.com/health" required />
+              <input
+                className="input"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://api.example.com/health"
+                required
+              />
             </div>
           )}
 
@@ -179,13 +214,18 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
               </div>
               <div>
                 <label className="label">Account label</label>
-                <input className="input" value={apiLabel} onChange={(e) => setApiLabel(e.target.value)} placeholder="team@acme.com" />
+                <input
+                  className="input"
+                  value={apiLabel}
+                  onChange={(e) => setApiLabel(e.target.value)}
+                  placeholder="team@acme.com"
+                />
               </div>
             </>
           )}
 
-          {/* Generic / Header quota vendor */}
-          {(type === "api_generic") && (
+          {/* Generic vendor */}
+          {type === "api_generic" && (
             <div>
               <label className="label">Vendor / provider</label>
               <select className="input" value={vendor} onChange={(e) => setVendor(e.target.value as Vendor)}>
@@ -245,53 +285,149 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
             </div>
           )}
 
-          {/* Database fields */}
+          {/* ── DATABASE FIELDS ─────────────────────────────── */}
           {type === "database" && (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
                   <label className="label">Host *</label>
-                  <input className="input" value={dbHost} onChange={(e) => setDbHost(e.target.value)} placeholder="db.example.com" required />
+                  <input
+                    className="input"
+                    value={dbHost}
+                    onChange={(e) => setDbHost(e.target.value)}
+                    placeholder="db.example.com"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="label">Port</label>
-                  <input className="input" value={dbPort} onChange={(e) => setDbPort(e.target.value)} placeholder="5432" />
+                  <input
+                    className="input"
+                    value={dbPort}
+                    onChange={(e) => setDbPort(e.target.value)}
+                    placeholder="5432"
+                  />
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="label">Database name *</label>
-                  <input className="input" value={dbName} onChange={(e) => setDbName(e.target.value)} placeholder="mydb" required />
+                  <input
+                    className="input"
+                    value={dbName}
+                    onChange={(e) => setDbName(e.target.value)}
+                    placeholder="mydb"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="label">User</label>
-                  <input className="input" value={dbUser} onChange={(e) => setDbUser(e.target.value)} placeholder="postgres" />
+                  <input
+                    className="input"
+                    value={dbUser}
+                    onChange={(e) => setDbUser(e.target.value)}
+                    placeholder="postgres"
+                  />
                 </div>
               </div>
+
               <div>
                 <label className="label">Password</label>
-                <input className="input" type="password" value={dbPassword} onChange={(e) => setDbPassword(e.target.value)} placeholder="••••••••" />
+                <input
+                  className="input"
+                  type="password"
+                  value={dbPassword}
+                  onChange={(e) => setDbPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
                 <p className="text-xs text-zinc-500 mt-1">Stored encrypted with AES-256-GCM</p>
               </div>
+
+              {/* SSL toggle */}
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="ssl" checked={dbSsl} onChange={(e) => setDbSsl(e.target.checked)} className="rounded" />
-                <label htmlFor="ssl" className="text-xs text-zinc-400">Enable SSL</label>
+                <input
+                  type="checkbox"
+                  id="ssl"
+                  checked={dbSsl}
+                  onChange={(e) => setDbSsl(e.target.checked)}
+                  className="rounded"
+                />
+                <label htmlFor="ssl" className="text-xs text-zinc-400">
+                  Enable SSL
+                  {sslProvider === "aiven" && (
+                    <span className="ml-2 text-amber-400 font-medium">— Aiven terdeteksi, SSL wajib</span>
+                  )}
+                </label>
               </div>
+
+              {/* SSL config section */}
               {dbSsl && (
-                <div className="space-y-2 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
-                  <p className="text-xs font-medium text-zinc-400">SSL certificates (optional, paste PEM content)</p>
+                <div className="space-y-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
+
+                  {/* Provider-specific guide */}
+                  {sslProvider === "aiven" && (
+                    <div className="flex gap-2 p-2 bg-amber-900/20 border border-amber-800/40 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-300 space-y-1">
+                        <p className="font-medium">Aiven memerlukan CA Certificate</p>
+                        <p className="text-amber-400/80">
+                          Download dari Aiven Console → service → Overview → <span className="font-mono">CA Certificate</span> → Download.
+                          Lalu buka file <span className="font-mono">ca.pem</span> dengan text editor dan paste isinya di bawah.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CA Certificate — paling penting, taruh paling atas */}
                   <div>
-                    <label className="label">CA Certificate (ssl_ca)</label>
-                    <textarea className="input font-mono text-xs h-16 resize-none" value={sslCa} onChange={(e) => setSslCa(e.target.value)} placeholder="-----BEGIN CERTIFICATE-----" />
+                    <label className="label">
+                      CA Certificate
+                      {needsCa && <span className="text-amber-400 ml-1">*</span>}
+                    </label>
+                    <textarea
+                      className={`input font-mono text-xs h-28 resize-y ${caWarning ? "border-amber-600" : ""}`}
+                      value={sslCa}
+                      onChange={(e) => setSslCa(e.target.value)}
+                      placeholder={"-----BEGIN CERTIFICATE-----\nMIIE...\n-----END CERTIFICATE-----"}
+                    />
+                    {caWarning && (
+                      <p className="text-xs text-amber-400 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        CA Certificate diperlukan untuk provider ini
+                      </p>
+                    )}
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Paste isi file <span className="font-mono">.pem</span> langsung — termasuk baris <span className="font-mono">BEGIN/END CERTIFICATE</span>
+                    </p>
                   </div>
-                  <div>
-                    <label className="label">Client Certificate (ssl_cert)</label>
-                    <textarea className="input font-mono text-xs h-16 resize-none" value={sslCert} onChange={(e) => setSslCert(e.target.value)} placeholder="-----BEGIN CERTIFICATE-----" />
-                  </div>
-                  <div>
-                    <label className="label">Client Key (ssl_key)</label>
-                    <textarea className="input font-mono text-xs h-16 resize-none" value={sslKey} onChange={(e) => setSslKey(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----" />
-                  </div>
+
+                  {/* Client cert & key — collapsed by default, only for mutual TLS */}
+                  <details className="group">
+                    <summary className="text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 select-none">
+                      Client Certificate & Key (opsional, hanya untuk mutual TLS)
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <label className="label">Client Certificate</label>
+                        <textarea
+                          className="input font-mono text-xs h-20 resize-y"
+                          value={sslCert}
+                          onChange={(e) => setSslCert(e.target.value)}
+                          placeholder={"-----BEGIN CERTIFICATE-----\nMIIE..."}
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Client Key</label>
+                        <textarea
+                          className="input font-mono text-xs h-20 resize-y"
+                          value={sslKey}
+                          onChange={(e) => setSslKey(e.target.value)}
+                          placeholder={"-----BEGIN PRIVATE KEY-----\nMIIE..."}
+                        />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               )}
             </div>
@@ -301,16 +437,35 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
           <div className="grid grid-cols-2 gap-3 pt-2 border-t border-zinc-800">
             <div>
               <label className="label">Check interval (seconds)</label>
-              <input className="input" type="number" min={10} value={intervalSec} onChange={(e) => setIntervalSec(parseInt(e.target.value))} />
+              <input
+                className="input"
+                type="number"
+                min={10}
+                value={intervalSec}
+                onChange={(e) => setIntervalSec(parseInt(e.target.value))}
+              />
             </div>
             <div>
               <label className="label">Slow threshold (ms, optional)</label>
-              <input className="input" type="number" value={alertOnSlowMs} onChange={(e) => setAlertOnSlowMs(e.target.value)} placeholder="e.g. 2000" />
+              <input
+                className="input"
+                type="number"
+                value={alertOnSlowMs}
+                onChange={(e) => setAlertOnSlowMs(e.target.value)}
+                placeholder="e.g. 2000"
+              />
             </div>
             {(type === "api_ai" || type === "api_header_quota") && (
               <div>
                 <label className="label">Quota alert threshold (%)</label>
-                <input className="input" type="number" min={1} max={100} value={alertQuotaPct} onChange={(e) => setAlertQuotaPct(parseInt(e.target.value))} />
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={alertQuotaPct}
+                  onChange={(e) => setAlertQuotaPct(parseInt(e.target.value))}
+                />
                 <p className="text-xs text-zinc-500 mt-1">Alert when quota drops below this %</p>
               </div>
             )}

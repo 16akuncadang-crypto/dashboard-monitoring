@@ -37,10 +37,11 @@ async function checkPostgres(
     };
   }
 
+  // rejectUnauthorized: false to handle self-signed chains (Aiven, etc)
   const sslConfig =
     monitor.db_ssl
       ? {
-          rejectUnauthorized: !!sslCa,
+          rejectUnauthorized: false,
           ca: sslCa ?? undefined,
           cert: sslCert ?? undefined,
           key: sslKey ?? undefined,
