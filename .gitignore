@@ -1,21 +1,29 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
 
 # Next.js
 .next/
 out/
-build/
 
-# Env files — NEVER commit these
+# Env files — JANGAN PERNAH COMMIT
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+.env.development
+.env.production
 
-# Debug
+# SSL / certificates
+*.pem
+*.crt
+*.key
+*.cert
+ca.pem
+
+# Build
+build/
+dist/
+
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -30,3 +38,10 @@ next-env.d.ts
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
