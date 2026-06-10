@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "src/app/api/cron/check/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/monitors/[id]/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/status/route.ts": {
+      "maxDuration": 15
+    }
+  },
+  "regions": ["iad1"]
+}
