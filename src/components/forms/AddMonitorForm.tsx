@@ -41,6 +41,8 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
   const [apiLabel, setApiLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const [managementApiKey, setManagementApiKey] = useState("");
+  const [showMgmtKey, setShowMgmtKey] = useState(false);
   const [intervalSec, setIntervalSec] = useState(60);
   const [alertOnSlowMs, setAlertOnSlowMs] = useState("");
   const [alertQuotaPct, setAlertQuotaPct] = useState(20);
@@ -82,6 +84,7 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
     try {
       const credentials: Record<string, string> = {};
       if (apiKey) credentials.api_key = apiKey;
+      if (managementApiKey) credentials.management_api_key = managementApiKey;
       if (dbPassword) credentials.db_password = dbPassword;
       if (dbUser) credentials.db_user = dbUser;
       if (sslCa) credentials.ssl_ca = sslCa;
@@ -257,6 +260,36 @@ export function AddMonitorForm({ defaultType, onSuccess, onClose }: AddMonitorFo
                 </button>
               </div>
               <p className="text-xs text-zinc-500 mt-1">Stored encrypted with AES-256-GCM</p>
+            </div>
+          )}
+
+          {/* Management API Key — OpenRouter only */}
+          {type === "api_ai" && vendor === "openrouter" && (
+            <div>
+              <label className="label">
+                Management API Key
+                <span className="text-zinc-500 font-normal ml-1">(opsional, untuk credit tracking yang akurat)</span>
+              </label>
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type={showMgmtKey ? "text" : "password"}
+                  value={managementApiKey}
+                  onChange={(e) => setManagementApiKey(e.target.value)}
+                  placeholder="sk-or-v1-..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMgmtKey(!showMgmtKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500"
+                >
+                  {showMgmtKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">
+                Buat di OpenRouter → Settings → API Keys → pilih tipe <span className="font-mono text-zinc-400">Provisioning</span>.
+                Digunakan untuk fetch data credits yang lebih akurat via <span className="font-mono text-zinc-400">/api/v1/credits</span>.
+              </p>
             </div>
           )}
 
